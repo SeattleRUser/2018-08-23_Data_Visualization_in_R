@@ -1,0 +1,341 @@
+---
+title: "Data Visualization Meetup"
+author: "Gagandeep Singh"
+date: "August 16, 2018"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Visualization in R
+
+We will now move on to actually building data visualizations using the *ggplot2* package.
+
+ggplot- "Grammer of graphics"
+
+How it works: Specify plot building blocks and combine them to create just about any kind of graphical display. Building blocks of a graph include:
+
+1. Data
+2. Aesthetic mapping
+3. Geometric object
+
+We use raw or modified data frames to specify x and y axis. Generally dplyr is used in conjuction with ggplot2 to implementing data wrangling.
+
+*Aesthetic Mapping:*
+In ggplot land, aesthetic means "something you can see". Examples include:
+position (i.e., on the x and y axes),
+color ("outside" color),
+fill ("inside" color),
+shape (of points),
+linetype,
+size etc.
+Each type of graphic accepts only a subset of all aesthetics. Aesthetic mappings are set with the aes() function.
+Note that variables are mapped to aesthetics with the aes() function, while fixed aesthetics are set outside the aes() call.
+
+*Geometic Objects:*
+Geometric objects are the actual marks we put on a plot. Examples include:
+points (geom_point, for scatter plots, dot plots, etc),
+lines (geom_line, for time series, trend lines, etc),
+boxplot (geom_boxplot) and so much more.
+
+Lets start building plots!
+
+dataset: nycflights13
+Airline on-time data for all flights departing NYC in 2013.
+Also includes useful 'metadata' on airlines, airports, weather, and planes
+
+**Scatterplot**
+
+We will do some data prep first.
+
+```{r warning=FALSE,message=FALSE}
+library(nycflights13)
+library(ggplot2)
+library(dplyr)
+
+# filter out all alaska airlines flights
+all_alaska_flights <- flights %>% 
+  filter(carrier == "AS")
+
+all_alaska_flights
+
+```
+
+Nowe we will use scatterplot to identify any relationship between arrival and departure delays of alaska airlines flights.
+
+```{r warning=FALSE}
+
+scatter_plot<- ggplot(data = all_alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + geom_point()
+plot(scatter_plot)
+
+ggsave("Scatterplot.png")
+```
+
+Within the ggplot() function call, we specify two of the components of the grammar:
+The data frame to be all_alaska_flights by setting data = all_alaska_flights
+and the aesthetic mapping by setting aes(x = dep_delay, y = arr_delay)
+
+We add a layer to the ggplot() function call using the + sign. The layer in question specifies the third component of the grammar: the geometric object. In this case the geometric object are points, set by specifying geom_point().
+
+Some notes on layers:
+Note that the + sign comes at the end of lines, and not at the beginning. You'll get an error in R if you put it at the beginning.
+When adding layers to a plot, you are encouraged to hit Return on your keyboard after entering the + so that the code for each layer is on a new line. As we add more and more layers to plots, you'll see this will greatly improve the legibility of your code.
+
+The first way of relieving overplotting is by changing the alpha argument in geom_point() which controls the transparency of the points. By default, this value is set to 1. We can change this to any value between 0 and 1 where 0 sets the points to be 100% transparent and 1 sets the points to be 100% opaque.
+
+```{r warning=FALSE}
+
+ggplot(data = all_alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_point(alpha = 0.2)
+```
+
+
+The second way of relieving overplotting is to jitter the points a bit. In other words, we are going to add just a bit of random noise to the points to better see them and alleviate some of the overplotting. You can think of "jittering" as shaking the points around a bit on the plot.
+
+```{r warning=FALSE}
+
+ggplot(data = all_alaska_flights, mapping = aes(x = dep_delay, y = arr_delay)) + 
+  geom_jitter(width = 30, height = 30)
+```
+
+**Line chart**
+
+Lets plot a line chart to understand variations in early january weather(first 15 days) at the Newark airport.
+
+First we need to do some data prep for the graphic, as usual:
+
+```{r warning=FALSE}
+
+early_january_weather <- weather %>% 
+  filter(origin == "EWR" & month == 1 & day <= 15)
+
+early_january_weather
+
+
+```
+
+lets plot a basic line chart now:
+
+```{r warning=FALSE}
+
+ggplot(data = early_january_weather, mapping = aes(x = time_hour, y = temp)) +
+  geom_line()
+
+ggsave("Lineplot.png")
+
+```
+
+
+**sound Check**: What all modifications can we apply to this basic line graph? What grammer will be used for each?
+
+**Box Plot**
+
+Lets use ggplo2 to create a box plot of temperature variations over the year.
+
+```{r warning=FALSE}
+
+ggplot(data = weather, mapping = aes(x = month, y = temp)) +
+  geom_boxplot()
+```
+
+
+Observe that this plot does not look like what we were expecting. We were expecting to see the distribution of temperatures for each month (so 12 different boxplots). The first warning is letting us know that we are plotting a numerical, and not categorical variable, on the x-axis. This gives us the overall boxplot without any other groupings. We can get around this by introducing a new function for our x variable:
+
+```{r warning=FALSE}
+
+ggplot(data = weather, mapping = aes(x = factor(month), y = temp)) +
+  geom_boxplot()
+ggsave("Boxplot.png")
+
+```
+
+Looking at this plot we can see, as expected, that summer months (6 through 8) have higher median temperatures as evidenced by the higher solid lines in the middle of the boxes. We can easily compare temperatures across months by drawing imaginary horizontal lines across the plot. Furthermore, the height of the 12 boxes as quantified by the interquartile ranges are informative too; they tell us about variability, or spread, of temperatures recorded in a given month.
+
+**Bar Graph**
+
+Next we will plot a bar graph to compare number of flights from each airline at the New York airports.
+
+```{r warning=FALSE}
+
+ggplot(data = flights, mapping = aes(x = carrier)) +
+  geom_bar()
+
+ggsave("Barplot.png")
+
+```
+
+We can use bargraphs to compare two categorical variables, this variation is called a stacked bar chart.
+
+minimal data prep:
+
+```{r warning=FALSE}
+
+flights_namedports <- flights %>% 
+  inner_join(airports, by = c("origin" = "faa"))
+```
+
+Stacked bar charts:
+
+```{r warning=FALSE}
+
+ggplot(data = flights_namedports, mapping = aes(x = carrier, fill = name)) +
+  geom_bar()
+```
+
+Another variation on the stacked barplot is the side-by-side barplot also called a dodged barplot.
+
+```{r warning=FALSE}
+
+ggplot(data = flights_namedports, mapping = aes(x = carrier, fill = name)) +
+  geom_bar(position = "dodge")
+```
+
+We can also create a faceted bar plot, which creates seperate bar plot for a categorical variable and creates a view to assist in comparing values for a common variable.
+
+```{r warning=FALSE}
+
+ggplot(data = flights_namedports, mapping = aes(x = carrier, fill = name)) +
+  geom_bar() +
+  facet_wrap(~ name, ncol = 1)
+```
+
+**Heat map**
+
+We will build a heatmap for plotting departure delays for all days of the week at the JFK airport. We will use the color aspect of the heat map to compare delays for all hours of each day of the week. It sounds intense, but we can achieve it easily through a heat map.
+
+Lets do the data preparation first:
+
+```{r warning=FALSE}
+
+flights_jfk <-
+  nycflights13::flights %>% 
+  filter(origin == "JFK") %>% 
+  mutate(hh = round(sched_dep_time / 100, 0) - 1) %>% 
+  mutate(yyyymmdd = lubridate::ymd(sprintf("%04.0f-%02.0f-%02.0f", year, month, day))) %>% 
+  mutate(wd = lubridate::wday(yyyymmdd, label = TRUE))
+
+flights_jfk[10,]
+```
+
+
+Here is the code for building the required heat map:
+
+```{r warning=FALSE}
+
+ggplot(flights_jfk, aes(hour, wd )) +
+  geom_tile(aes(fill = dep_delay))
+
+ggsave("Heatmapplot.png")
+
+```
+
+**What are my other options?**
+
+**ggvis**
+
+The goal of ggvis is to make it easy to build interactive graphics for exploratory data analysis. ggvis has a similar underlying theory to ggplot2 (the grammar of graphics), but it's expressed a little differently, and adds new features to make your plots interactive. ggvis also incorporates shiny's reactive programming model and dplyr's grammar of data transformation.
+
+```{r warning=FALSE, message=FALSE}
+
+#install.packages(ggvis)
+library(ggvis)
+p<-ggvis(mtcars, x = ~wt, y = ~mpg)
+layer_points(p)
+```
+
+all ggvis graphics are web graphics, and need to be shown in the browser. RStudio includes a built-in browser so it can show you the plots directly
+
+```{r warning=FALSE}
+
+mtcars %>%
+  ggvis(x = ~wt, y = ~mpg) %>%
+  layer_points()
+
+```
+
+add more variables using fill, stroke, size, shape
+
+```{r warning=FALSE}
+
+mtcars %>% ggvis(~mpg, ~disp, stroke = ~vs) %>% layer_points()
+
+```
+
+
+add interactive controls
+
+```{r warning=FALSE}
+mtcars %>% 
+  ggvis(~wt, ~mpg, 
+        size := input_slider(10, 100),
+        opacity := input_slider(0, 1)
+  ) %>% 
+  layer_points()
+
+```
+
+
+**Plotly**
+
+Plotly is an R package for creating interactive web-based graphs via the open source JavaScript graphing library plotly.js.
+Plotly graphs are interactive.
+You can publish your charts to the web with Plotly's web service.
+
+```{r warning=FALSE, message=FALSE}
+#install.packages("plotly")
+
+library(plotly)
+plot_ly(midwest, x = ~percollege, color = ~state, type = "box")
+
+```
+
+
+**Shiny**
+
+Shiny is an R package that makes it easy to build interactive web apps straight from R. You can host standalone apps on a webpage or embed them in R Markdown documents or build dashboards. You can also extend your Shiny apps with CSS themes, htmlwidgets, and JavaScript actions.
+
+Shiny applications have two components, a user interface object and a server function, that are passed as arguments to the shinyApp function that creates a Shiny app object from this UI/server pair.
+
+
+**Making maps with R**
+
+We will look at examples using maps package
+
+```{r warning=FALSE,message=FALSE}
+#install.packages(c("maps", "mapdata"))
+
+library(maps)
+library(mapdata)
+
+states <- map_data("state")
+dim(states)
+
+ggplot(data = states) + 
+  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
+  coord_fixed(1.3) +
+  guides(fill=FALSE)  # do this to leave off the color legend
+
+ditch_the_axes <- theme(
+  axis.text = element_blank(),
+  axis.line = element_blank(),
+  axis.ticks = element_blank(),
+  panel.border = element_blank(),
+  panel.grid = element_blank(),
+  axis.title = element_blank()
+)
+
+ca_df <- subset(states, region == "california")
+
+ca_base <- ggplot(data = ca_df, mapping = aes(x = long, y = lat, group = group)) + 
+  coord_fixed(1.3) + 
+  geom_polygon(color = "black", fill = "gray")
+ca_base
+
+```
+
+
